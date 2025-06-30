@@ -2217,17 +2217,18 @@ static int axg_audio_clkc_probe(struct platform_device *pdev)
 	/* some amlogic chip clock pad reg domian is different */
 	if (audio_clock_pad_is_new_regmap(dev->of_node)) {
 		struct resource *res;
+		regs = devm_platform_get_and_ioremap_resource(pdev, 1, &res);
+		if (IS_ERR(regs))
+			return PTR_ERR(regs);
+		static const unsigned int max_register = resource_size(res) - 4;
+		static const char *name = devm_kasprintf(dev, GFP_KERNEL, "%s-%s", dev->of_node->name, "pads");
 		static const struct regmap_config aud_regmap_config = {
 			.reg_bits = 32,
 			.val_bits = 32,
 			.reg_stride = 4,
+			.max_register = max_register,
+			.name = name,
 		};
-		regs = devm_platform_get_and_ioremap_resource(pdev, 1, &res);
-		if (IS_ERR(regs))
-			return PTR_ERR(regs);
-		aud_regmap_config.max_register = resource_size(res) - 4;
-		aud_regmap_config.name =
-			devm_kasprintf(dev, GFP_KERNEL, "%s-%s", dev->of_node->name, "pads");
 		map = devm_regmap_init_mmio(dev, regs, &aud_regmap_config);
 		/* Populate clk pad regmap for the regmap backed clocks */
 		for (i = 0; i < data->regmap_clk_pads_num; i++)
